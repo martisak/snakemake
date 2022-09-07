@@ -419,7 +419,7 @@ class Job(AbstractJob):
 
     @property
     def container_img(self):
-        if self.dag.workflow.use_singularity and self.container_img_url:
+        if (self.dag.workflow.use_singularity or self.dag.workflow.use_docker) and self.container_img_url:
             return self.dag.container_imgs[self.container_img_url]
         return None
 

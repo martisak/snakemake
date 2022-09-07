@@ -319,8 +319,11 @@ class RealExecutor(AbstractExecutor):
                 w2a("conda_prefix"),
                 w2a("conda_base_path", skip=not self.assume_shared_fs),
                 w2a("use_singularity"),
+                w2a("use_docker"),
                 w2a("singularity_prefix"),
                 w2a("singularity_args"),
+                w2a("docker_cmd"),
+                w2a("docker_args"),
                 w2a("execute_subworkflows", flag="--no-subworkflows", invert=True),
                 w2a("max_threads"),
                 w2a("use_env_modules", flag="--use-envmodules"),
@@ -522,7 +525,7 @@ class CPUExecutor(RealExecutor):
             job.conda_env.address if self.workflow.use_conda and job.conda_env else None
         )
         container_img = (
-            job.container_img_path if self.workflow.use_singularity else None
+            job.container_img_path if (self.workflow.use_singularity or self.workflow.use_docker) else None
         )
         env_modules = job.env_modules if self.workflow.use_env_modules else None
 
@@ -544,8 +547,11 @@ class CPUExecutor(RealExecutor):
             conda_env,
             container_img,
             self.workflow.singularity_args,
+            self.workflow.docker_args,
+            self.workflow.docker_cmd,
             env_modules,
             self.workflow.use_singularity,
+            self.workflow.use_docker,
             self.workflow.linemaps,
             self.workflow.debug,
             self.workflow.cleanup_scripts,
@@ -2415,8 +2421,11 @@ def run_wrapper(
     conda_env,
     container_img,
     singularity_args,
+    docker_args,
+    docker_cmd,
     env_modules,
     use_singularity,
+    use_docker,
     linemaps,
     debug,
     cleanup_scripts,
@@ -2458,7 +2467,7 @@ def run_wrapper(
     # Change workdir if shadow defined and not using singularity.
     # Otherwise, we do the change from inside the container.
     passed_shadow_dir = None
-    if use_singularity and container_img:
+    if (use_singularity or use_docker) and container_img:
         passed_shadow_dir = shadow_dir
         shadow_dir = None
 
@@ -2556,6 +2565,9 @@ def run_wrapper(
                     container_img,
                     singularity_args,
                     use_singularity,
+                    use_docker,
+                    docker_args,
+                    docker_cmd,
                     env_modules,
                     None,
                     jobid,

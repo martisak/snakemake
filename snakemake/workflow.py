@@ -122,9 +122,12 @@ class Workflow:
         conda_frontend=None,
         conda_prefix=None,
         use_singularity=False,
+        use_docker=False,
         use_env_modules=False,
         singularity_prefix=None,
         singularity_args="",
+        docker_args="",
+        docker_cmd="docker",
         shadow_prefix=None,
         scheduler_type="ilp",
         scheduler_ilp_solver=None,
@@ -201,9 +204,12 @@ class Workflow:
         self.conda_frontend = conda_frontend
         self.conda_prefix = conda_prefix
         self.use_singularity = use_singularity
+        self.use_docker = use_docker
         self.use_env_modules = use_env_modules
         self.singularity_prefix = singularity_prefix
         self.singularity_args = singularity_args
+        self.docker_args = docker_args
+        self.docker_cmd = docker_cmd
         self.shadow_prefix = shadow_prefix
         self.scheduler_type = scheduler_type
         self.scheduler_ilp_solver = scheduler_ilp_solver
@@ -845,6 +851,8 @@ class Workflow:
                 deploy.append("conda")
             if self.use_singularity:
                 deploy.append("singularity")
+            if self.use_docker:
+                deploy.append("docker")
             unit_tests.generate(
                 dag, path, deploy, configfiles=self.overwrite_configfiles
             )
@@ -912,10 +920,11 @@ class Workflow:
             dag.list_untracked()
             return True
 
-        if self.use_singularity and self.assume_shared_fs:
+        if (self.use_singularity or self.use_docker) and self.assume_shared_fs:
             dag.pull_container_imgs(
                 dryrun=dryrun or list_conda_envs, quiet=list_conda_envs
             )
+
         if self.use_conda:
             dag.create_conda_envs(
                 dryrun=dryrun or list_conda_envs or conda_cleanup_envs,
@@ -1018,7 +1027,7 @@ class Workflow:
                 if not self.use_conda and any(rule.conda_env for rule in self.rules):
                     logger.info("Conda environments: ignored")
 
-                if not self.use_singularity and any(
+                if not (self.use_singularity or self.use_docker) and any(
                     rule.container_img for rule in self.rules
                 ):
                     logger.info("Singularity containers: ignored")

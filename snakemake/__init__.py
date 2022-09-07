@@ -143,8 +143,11 @@ def snakemake(
     force_use_threads=False,
     use_conda=False,
     use_singularity=False,
+    use_docker=False,
     use_env_modules=False,
     singularity_args="",
+    docker_args="",
+    docker_cmd="docker",
     conda_frontend="conda",
     conda_prefix=None,
     conda_cleanup_pkgs=None,
@@ -279,8 +282,11 @@ def snakemake(
         force_use_threads:          whether to force the use of threads over processes. helpful if shared memory is full or unavailable (default False)
         use_conda (bool):           use conda environments for each job (defined with conda directive of rules)
         use_singularity (bool):     run jobs in singularity containers (if defined with singularity directive)
+        use_docker (bool):     run jobs in singularity containers (if defined with singularity directive)
         use_env_modules (bool):     load environment modules if defined in rules
         singularity_args (str):     additional arguments to pass to a singularity
+        docker_args (str):          additional arguments to pass to a singularity
+        docker_cmd (str):           docker or nerdctl
         conda_prefix (str):         the directory in which conda environments will be created (default None)
         conda_cleanup_pkgs (snakemake.deployment.conda.CondaCleanupMode):
                                     whether to clean up conda tarballs after env creation (default None), valid values: "tarballs", "cache"
@@ -578,6 +584,7 @@ def snakemake(
             verbose=verbose,
             use_conda=use_conda or list_conda_envs or conda_cleanup_envs,
             use_singularity=use_singularity,
+            use_docker=use_docker,
             use_env_modules=use_env_modules,
             conda_frontend=conda_frontend,
             conda_prefix=conda_prefix,
@@ -585,6 +592,8 @@ def snakemake(
             singularity_prefix=singularity_prefix,
             shadow_prefix=shadow_prefix,
             singularity_args=singularity_args,
+            docker_args=docker_args,
+            docker_cmd=docker_cmd,
             scheduler_type=scheduler,
             scheduler_ilp_solver=scheduler_ilp_solver,
             mode=mode,
@@ -688,6 +697,7 @@ def snakemake(
                     force_use_threads=use_threads,
                     use_conda=use_conda,
                     use_singularity=use_singularity,
+                    use_docker=use_docker,
                     use_env_modules=use_env_modules,
                     conda_prefix=conda_prefix,
                     conda_cleanup_pkgs=conda_cleanup_pkgs,
@@ -695,6 +705,8 @@ def snakemake(
                     singularity_prefix=singularity_prefix,
                     shadow_prefix=shadow_prefix,
                     singularity_args=singularity_args,
+                    docker_args=docker_args,
+                    docker_cmd=docker_cmd,
                     scheduler=scheduler,
                     scheduler_ilp_solver=scheduler_ilp_solver,
                     list_conda_envs=list_conda_envs,
@@ -2453,6 +2465,31 @@ def get_argument_parser(profile=None):
         help="Pass additional args to singularity.",
     )
 
+
+    group_docker = parser.add_argument_group("DOCKER")
+
+    group_docker.add_argument(
+        "--use-docker",
+        action="store_true",
+        help="If defined in the rule, run job within a container. "
+        "If this flag is not set, the docker directive is ignored.",
+    )
+
+    group_docker.add_argument(
+        "--docker-cmd",
+        default="docker",
+        metavar="ARGS",
+        help="docker command (docker or nerdctl)",
+    )
+
+    group_docker.add_argument(
+        "--docker-args",
+        default="",
+        metavar="ARGS",
+        help="Pass additional args to docker.",
+    )
+
+
     group_env_modules = parser.add_argument_group("ENVIRONMENT MODULES")
 
     group_env_modules.add_argument(
@@ -2970,10 +3007,13 @@ def main(argv=None):
             conda_cleanup_pkgs=args.conda_cleanup_pkgs,
             list_conda_envs=args.list_conda_envs,
             use_singularity=args.use_singularity,
+            use_docker=args.use_docker,
             use_env_modules=args.use_envmodules,
             singularity_prefix=args.singularity_prefix,
             shadow_prefix=args.shadow_prefix,
             singularity_args=args.singularity_args,
+            docker_args=args.docker_args,
+            docker_cmd=args.docker_cmd,
             scheduler=args.scheduler,
             scheduler_ilp_solver=args.scheduler_ilp_solver,
             conda_create_envs_only=args.conda_create_envs_only,

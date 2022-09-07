@@ -37,7 +37,7 @@ from snakemake.exceptions import RemoteFileException, WorkflowError, ChildIOExce
 from snakemake.exceptions import InputFunctionException
 from snakemake.logging import logger
 from snakemake.common import DYNAMIC_FILL, ON_WINDOWS, group_into_chunks, is_local_file
-from snakemake.deployment import conda, singularity
+from snakemake.deployment import conda, singularity, docker
 from snakemake.output_index import OutputIndex
 from snakemake import workflow
 from snakemake.sourcecache import (
@@ -299,7 +299,7 @@ class DAG:
         # Then based on md5sum values
         for (env_spec, simg_url) in env_set:
             simg = None
-            if simg_url and self.workflow.use_singularity:
+            if simg_url and (self.workflow.use_singularity or self.workflow.use_docker):
                 assert (
                     simg_url in self.container_imgs
                 ), "bug: must first pull singularity images"
@@ -328,7 +328,10 @@ class DAG:
 
         for img_url, is_containerized in img_set:
             if img_url not in self.container_imgs:
-                img = singularity.Image(img_url, self, is_containerized)
+                if self.workflow.use_singularity:
+                    img = singularity.Image(img_url, self, is_containerized)
+                elif self.workflow.use_docker:
+                    img = docker.Image(img_url, self, is_containerized)
                 self.container_imgs[img_url] = img
 
     def pull_container_imgs(self, dryrun=False, quiet=False):
@@ -1620,7 +1623,7 @@ class DAG:
         if updated_dag:
             # We might have new jobs, so we need to ensure that all conda envs
             # and singularity images are set up.
-            if self.workflow.use_singularity:
+            if (self.workflow.use_singularity or self.workflow.use_docker):
                 self.pull_container_imgs()
             if self.workflow.use_conda:
                 self.create_conda_envs()

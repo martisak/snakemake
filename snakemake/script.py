@@ -40,7 +40,7 @@ from snakemake.common import (
     is_local_file,
 )
 from snakemake.io import git_content, split_git_path
-from snakemake.deployment import singularity
+from snakemake.deployment import singularity, docker
 
 # TODO use this to find the right place for inserting the preamble
 PY_PREAMBLE_RE = re.compile(r"from( )+__future__( )+import.*?(?P<end>[;\n])")
@@ -405,6 +405,8 @@ class ScriptBase(ABC):
         conda_base_path,
         container_img,
         singularity_args,
+        docker_args,
+        docker_cmd,
         env_modules,
         bench_record,
         jobid,
@@ -430,6 +432,8 @@ class ScriptBase(ABC):
         self.conda_base_path = conda_base_path
         self.container_img = container_img
         self.singularity_args = singularity_args
+        self.docker_args = docker_args
+        self.docker_cmd = docker_cmd
         self.env_modules = env_modules
         self.bench_record = bench_record
         self.jobid = jobid
@@ -496,6 +500,8 @@ class ScriptBase(ABC):
             shadow_dir=self.shadow_dir,
             env_modules=self.env_modules,
             singularity_args=self.singularity_args,
+            docker_args=self.docker_args,
+            docker_cmd=self.docker_cmd,
             resources=self.resources,
             threads=self.threads,
             **kwargs,
@@ -520,6 +526,8 @@ class PythonScript(ScriptBase):
         conda_env,
         container_img,
         singularity_args,
+        docker_args,
+        docker_cmd,
         env_modules,
         bench_record,
         jobid,
@@ -595,6 +603,8 @@ class PythonScript(ScriptBase):
             self.conda_env,
             self.container_img,
             self.singularity_args,
+            self.docker_args,
+            self.docker_cmd,
             self.env_modules,
             self.bench_record,
             self.jobid,
@@ -1179,6 +1189,8 @@ class RustScript(ScriptBase):
             self.conda_env,
             self.container_img,
             self.singularity_args,
+            self.docker_args,
+            self.docker_cmd,
             self.env_modules,
             self.bench_record,
             self.jobid,
@@ -1321,6 +1333,8 @@ class BashScript(ScriptBase):
         conda_env,
         container_img,
         singularity_args,
+        docker_args,
+        docker_cmd,
         env_modules,
         bench_record,
         jobid,
@@ -1366,6 +1380,8 @@ class BashScript(ScriptBase):
             conda_env=self.conda_env,
             container_img=self.container_img,
             singularity_args=self.singularity_args,
+            docker_args=self.docker_args,
+            docker_cmd=self.docker_cmd,
             env_modules=self.env_modules,
             bench_record=self.bench_record,
             jobid=self.jobid,
@@ -1487,6 +1503,8 @@ def script(
     conda_base_path,
     container_img,
     singularity_args,
+    docker_args,
+    docker_cmd,
     env_modules,
     bench_record,
     jobid,
@@ -1533,6 +1551,8 @@ def script(
         conda_base_path,
         container_img,
         singularity_args,
+        docker_args,
+        docker_cmd,
         env_modules,
         bench_record,
         jobid,

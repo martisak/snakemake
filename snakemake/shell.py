@@ -16,7 +16,7 @@ import threading
 from snakemake.utils import format, argvquote, cmd_exe_quote, find_bash_on_windows
 from snakemake.common import ON_WINDOWS, RULEFUNC_CONTEXT_MARKER
 from snakemake.logging import logger
-from snakemake.deployment import singularity
+from snakemake.deployment import singularity, docker
 from snakemake.deployment.conda import Conda
 from snakemake.exceptions import WorkflowError
 
@@ -158,6 +158,8 @@ class shell:
         if not context.get("is_shell"):
             logger.shellcmd(cmd)
 
+        logger.debug(context)
+
         conda_env = context.get("conda_env", None)
         conda_base_path = context.get("conda_base_path", None)
         container_img = context.get("container_img", None)
@@ -165,9 +167,15 @@ class shell:
         shadow_dir = context.get("shadow_dir", None)
         resources = context.get("resources", {})
         singularity_args = context.get("singularity_args", "")
+        use_docker = context.get("use_docker", False)
+        use_singularity = context.get("use_singularity", False)
+        docker_args = context.get("docker_args", "")
+        docker_cmd = context.get("docker_cmd", "docker")
         threads = context.get("threads", 1)
 
         cmd = " ".join((cls._process_prefix, cmd, cls._process_suffix)).strip()
+
+        
 
         if env_modules:
             cmd = env_modules.shellcmd(cmd)
@@ -193,7 +201,8 @@ class shell:
             os.chmod(script, os.stat(script).st_mode | stat.S_IXUSR | stat.S_IRUSR)
             cmd = '"{}" "{}"'.format(cls.get_executable() or "/bin/sh", script)
 
-        if container_img:
+        if container_img and use_singularity:
+            logger.debug(container_img)
             cmd = singularity.shellcmd(
                 container_img,
                 cmd,
@@ -204,6 +213,19 @@ class shell:
                 is_python_script=context.get("is_python_script", False),
             )
             logger.info("Activating singularity image {}".format(container_img))
+        elif container_img and use_docker:
+            
+            cmd = docker.shellcmd(
+                container_img,
+                cmd,
+                docker_args,
+                envvars=None,
+                shell_executable=cls._process_args["executable"],
+                container_workdir="/data", #   TODO: Fix fixed path
+                is_python_script=context.get("is_python_script", False),
+            )
+            logger.info("Activating Docker image {}".format(container_img))
+
         if conda_env:
             logger.info(
                 "Activating conda environment: {}".format(os.path.relpath(conda_env))

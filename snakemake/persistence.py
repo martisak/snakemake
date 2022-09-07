@@ -55,7 +55,8 @@ class Persistence:
         else:
             self.conda_env_path = os.path.abspath(os.path.expanduser(conda_prefix))
         if singularity_prefix is None:
-            self.container_img_path = os.path.join(self.path, "singularity")
+            self.container_img_path = os.path.join(self.path, "image")
+        
         else:
             self.container_img_path = os.path.abspath(
                 os.path.expanduser(singularity_prefix)
